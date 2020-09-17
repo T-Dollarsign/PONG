@@ -1,17 +1,19 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 
 namespace Pong
 {
     public class Game1 : Game
     {
+        Random rnd = new Random();
+
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         Texture2D ball, blue, red;
-        Vector2 ballPos, bluePos, redPos;
+        Vector2 ballPos, bluePos, redPos, newBallPos;
         int blueLives, redLives;
-        
 
         public Game1()
         {
@@ -56,6 +58,10 @@ namespace Pong
             bluePos = new Vector2(0, (Window.ClientBounds.Height / 2) - (blue.Height / 2));
             redPos = new Vector2((Window.ClientBounds.Width - red.Width), (Window.ClientBounds.Height / 2) - (red.Height /2));
 
+
+            newBallPos = new Vector2(rnd.Next(-10, 10), rnd.Next(-10, 10));
+            newBallPos.Normalize();
+            newBallPos *= 4;
         }
 
         protected override void UnloadContent()
@@ -70,7 +76,8 @@ namespace Pong
 
             // TODO: Add your update logic here
 
-            int playerSpeed = Window.ClientBounds.Height / 40;
+            int playerSpeed = Window.ClientBounds.Height / 50;
+
 
             if (Keyboard.GetState().IsKeyDown(Keys.W))
             {
@@ -104,15 +111,11 @@ namespace Pong
             if (redPos.Y > Window.ClientBounds.Height - blue.Height)
                 redPos.Y = Window.ClientBounds.Height - blue.Height;
 
-            
-            
+            ballPos += newBallPos;
+
             base.Update(gameTime);
         }
 
-        /// <summary>
-        /// This is called when the game should draw itself.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.White);
