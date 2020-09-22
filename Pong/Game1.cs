@@ -13,7 +13,7 @@ namespace Pong
         SpriteBatch spriteBatch;
         Texture2D ball, blue, red;
         Vector2 ballPos, bluePos, redPos, newBallPos;
-        int blueLives, redLives;
+        int blueLives, redLives, speedCounter, maxSpeedCounter;
 
         public Game1()
         {
@@ -62,22 +62,46 @@ namespace Pong
             newBallPos = new Vector2(rnd.Next(-10, 10), rnd.Next(-10, 10));
             newBallPos.Normalize();
             newBallPos *= 4;
+
+            speedCounter = 0;
         }
 
-        protected override void UnloadContent()
+        public Rectangle BoundingboxRed
         {
-            // TODO: Unload any non ContentManager content here
+            get
+            {
+                Rectangle redBounds = red.Bounds;
+                redBounds.Offset(redPos);
+                return redBounds;
+            }
         }
 
-        protected override void Update(GameTime gameTime)
+       
+
+        public Rectangle BoundingboxBlue
         {
-            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+            get
+            {
+                Rectangle blueBounds = blue.Bounds;
+                blueBounds.Offset(bluePos);
+                return blueBounds;
+            }
+        }
 
-            // TODO: Add your update logic here
+        public Rectangle BoundingboxBall
+        {
+            get
+            {
+                Rectangle ballBounds = ball.Bounds;
+                ballBounds.Offset(ballPos);
+                return ballBounds;
+            }
+        }
 
+        public void PlayerMovement()
+        {
+            //moving the player
             int playerSpeed = Window.ClientBounds.Height / 50;
-
 
             if (Keyboard.GetState().IsKeyDown(Keys.W))
             {
@@ -110,8 +134,64 @@ namespace Pong
 
             if (redPos.Y > Window.ClientBounds.Height - blue.Height)
                 redPos.Y = Window.ClientBounds.Height - blue.Height;
+        }
 
+        public void BallMovement()
+        {
+            //moving the ball
             ballPos += newBallPos;
+
+            maxSpeedCounter = 10;
+
+            //keeping the ball within bounds
+            if (ballPos.Y < 0)
+            {
+                newBallPos.Y = -newBallPos.Y;
+            }
+
+            if (ballPos.Y > Window.ClientBounds.Height - ball.Height)
+            {
+                newBallPos.Y = -newBallPos.Y;
+            }
+
+            if (ballPos.X < 0)
+            {
+                //Add score red
+                LoadContent();
+            }
+
+            if (ballPos.X > Window.ClientBounds.Width - ball.Width)
+            {
+                //Add score blue
+                LoadContent();
+            }
+
+            if (BoundingboxBall.Intersects(BoundingboxBlue) || BoundingboxBall.Intersects(BoundingboxRed))
+            {
+                newBallPos.X = -newBallPos.X;
+                
+
+                if (speedCounter < maxSpeedCounter)
+                {
+                    speedCounter += 1;
+                    newBallPos *= 1.1f;
+                }
+            }
+        }
+        protected override void UnloadContent()
+        {
+            // TODO: Unload any non ContentManager content here
+        }
+
+        protected override void Update(GameTime gameTime)
+        {
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+                Exit();
+
+            
+
+            PlayerMovement();
+            BallMovement();
 
             base.Update(gameTime);
         }
