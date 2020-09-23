@@ -12,8 +12,9 @@ namespace Pong
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         Texture2D ball, blue, red;
-        Vector2 ballPos, bluePos, redPos, newBallPos;
+        Vector2 ballPos, bluePos, redPos, newBallPos, blueLivesPos, redLivesPos, livesOffset;
         int blueLives, redLives, speedCounter, maxSpeedCounter;
+        float ballSpeed;
 
         public Game1()
         {
@@ -57,13 +58,29 @@ namespace Pong
             ballPos = new Vector2((Window.ClientBounds.Width / 2) - (ball.Width / 2), (Window.ClientBounds.Height / 2) - (ball.Height / 2));
             bluePos = new Vector2(0, (Window.ClientBounds.Height / 2) - (blue.Height / 2));
             redPos = new Vector2((Window.ClientBounds.Width - red.Width), (Window.ClientBounds.Height / 2) - (red.Height /2));
+            blueLivesPos = Vector2.Zero;
+            redLivesPos = new Vector2(Window.ClientBounds.Width - red.Width, 0);
+            livesOffset = new Vector2(ball.Width, 0);
 
+            ballSpeed = 5;
 
-            newBallPos = new Vector2(rnd.Next(-10, 10), rnd.Next(-10, 10));
+            newBallPos = GenerateDirection();
             newBallPos.Normalize();
-            newBallPos *= 4;
+            newBallPos *= ballSpeed;
 
             speedCounter = 0;
+        }
+
+        public Vector2 GenerateDirection()
+        {
+            Vector2 direction = new Vector2(rnd.Next(-10, 10), rnd.Next(-10, 10));
+
+            while ((direction.X >= -7) && (direction.X <= 7))
+            {
+                direction = new Vector2(rnd.Next(-10, 10), rnd.Next(-10, 10));
+            }
+
+            return direction;
         }
 
         public Rectangle BoundingboxRed
@@ -75,8 +92,6 @@ namespace Pong
                 return redBounds;
             }
         }
-
-       
 
         public Rectangle BoundingboxBlue
         {
@@ -144,38 +159,68 @@ namespace Pong
             maxSpeedCounter = 10;
 
             //keeping the ball within bounds
-            if (ballPos.Y < 0)
+            if (ballPos.Y <= 0)
             {
                 newBallPos.Y = -newBallPos.Y;
             }
 
-            if (ballPos.Y > Window.ClientBounds.Height - ball.Height)
+            if (ballPos.Y >= Window.ClientBounds.Height - ball.Height)
             {
                 newBallPos.Y = -newBallPos.Y;
             }
 
             if (ballPos.X < 0)
             {
-                //Add score red
+                LoseLife(1);
                 LoadContent();
             }
 
             if (ballPos.X > Window.ClientBounds.Width - ball.Width)
             {
-                //Add score blue
+                LoseLife(2);
                 LoadContent();
             }
 
-            if (BoundingboxBall.Intersects(BoundingboxBlue) || BoundingboxBall.Intersects(BoundingboxRed))
+            if (BoundingboxBall.Intersects(BoundingboxBlue))
             {
                 newBallPos.X = -newBallPos.X;
-                
+
+                float offsetMiddle = (bluePos.Y + (blue.Height / 2)) - (ballPos.Y + (ball.Height / 2));
+                float normOffsetMiddle = (offsetMiddle / (blue.Height / 2));
+                float angleIncrease = normOffsetMiddle * 7;
+
+                newBallPos.Y = -angleIncrease;
+                newBallPos.Normalize();
 
                 if (speedCounter < maxSpeedCounter)
                 {
                     speedCounter += 1;
-                    newBallPos *= 1.1f;
+                    ballSpeed *= 1.1f;
                 }
+
+                newBallPos *= ballSpeed;
+                
+            }
+
+            if (BoundingboxBall.Intersects(BoundingboxRed))
+            {
+                newBallPos.X = -newBallPos.X;
+
+                float offsetMiddle = (redPos.Y + (red.Height / 2)) - (ballPos.Y + (ball.Height / 2));       //difference between middle of paddle and middle of ball in pixels
+                float normOffsetMiddle = (offsetMiddle / (red.Height / 2));                                 //difference between middle of paddle and middle of ball normalized (decimal number between -1 and 1)
+                float angleIncrease = normOffsetMiddle * 7;                                                 //determines how extreme the bounce angle will be
+
+                newBallPos.Y = -angleIncrease;                                                              //
+                newBallPos.Normalize();
+
+                if (speedCounter < maxSpeedCounter)
+                {
+                    speedCounter += 1;
+                    ballSpeed *= 1.1f;
+                }
+
+                newBallPos *= ballSpeed;
+                
             }
         }
         protected override void UnloadContent()
@@ -205,6 +250,16 @@ namespace Pong
             spriteBatch.Draw(ball, ballPos, Color.White);
             spriteBatch.Draw(blue, bluePos, Color.White);
             spriteBatch.Draw(red, redPos, Color.White);
+            
+            for (int i = 0; i < blueLives; ++i)
+            {
+                spriteBatch.Draw(ball, blueLivesPos + livesOffset * i, Color.White);
+            }
+
+            for (int i = 0; i < redLives; ++i)
+            {
+                spriteBatch.Draw(ball, redLivesPos - livesOffset * i, Color.White);
+            }
             spriteBatch.End();
         }
 
