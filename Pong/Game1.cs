@@ -5,70 +5,62 @@ using System;
 
 namespace Pong
 {
-    public class Game1 : Game
+    public class Pong : Game
     {
         Random rnd = new Random();
 
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        Texture2D ball, blue, red;
+        Texture2D ball, blue, red, titleScreen, blueWinsScreen, redWinsScreen;
         Vector2 ballPos, bluePos, redPos, newBallPos, blueLivesPos, redLivesPos, livesOffset;
         int blueLives, redLives, speedCounter, maxSpeedCounter;
         float ballSpeed;
+        enum GameState
+        {
+            Start,
+            Playing,
+            BlueWins,
+            RedWins
+        };
+        GameState currentState;
 
-        public Game1()
+        public Pong()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            blueLives = 3;
-            redLives = 3;
             //graphics.PreferredBackBufferWidth = 1280;
             //graphics.PreferredBackBufferHeight = 720;
         }
 
-        public void LoseLife(int caseSwitch)
-        {
-
-            switch (caseSwitch)
-            {
-                case 1:
-                    blueLives--;
-                    break;
-                case 2:
-                    redLives--;
-                    break;
-            }
-        }
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
 
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
             ball = Content.Load<Texture2D>("bal");
             blue = Content.Load<Texture2D>("blauweSpeler");
             red = Content.Load<Texture2D>("rodeSpeler");
-
-            ballPos = new Vector2((Window.ClientBounds.Width / 2) - (ball.Width / 2), (Window.ClientBounds.Height / 2) - (ball.Height / 2));
+            titleScreen = Content.Load<Texture2D>("startScreen");
+            redWinsScreen = Content.Load< Texture2D > ("redWinsScreen");
+            blueWinsScreen = Content.Load<Texture2D>("blueWinsScreen");
+            
             bluePos = new Vector2(0, (Window.ClientBounds.Height / 2) - (blue.Height / 2));
             redPos = new Vector2((Window.ClientBounds.Width - red.Width), (Window.ClientBounds.Height / 2) - (red.Height /2));
             blueLivesPos = Vector2.Zero;
             redLivesPos = new Vector2(Window.ClientBounds.Width - red.Width, 0);
             livesOffset = new Vector2(ball.Width, 0);
 
-            ballSpeed = 5;
+            blueLives = 3;
+            redLives = 3;
 
-            newBallPos = GenerateDirection();
-            newBallPos.Normalize();
-            newBallPos *= ballSpeed;
+            currentState = GameState.Start;
 
-            speedCounter = 0;
+            NewBall();
         }
 
         public Vector2 GenerateDirection()
@@ -116,7 +108,7 @@ namespace Pong
         public void PlayerMovement()
         {
             //moving the player
-            int playerSpeed = Window.ClientBounds.Height / 50;
+            int playerSpeed = 10;                                  //Window.ClientBounds.Height / 50;
 
             if (Keyboard.GetState().IsKeyDown(Keys.W))
             {
@@ -161,24 +153,26 @@ namespace Pong
             //keeping the ball within bounds
             if (ballPos.Y <= 0)
             {
+                ballPos.Y = 0;
                 newBallPos.Y = -newBallPos.Y;
             }
 
             if (ballPos.Y >= Window.ClientBounds.Height - ball.Height)
             {
+                ballPos.Y = Window.ClientBounds.Height - ball.Height;
                 newBallPos.Y = -newBallPos.Y;
             }
 
             if (ballPos.X < 0)
             {
-                LoseLife(1);
-                LoadContent();
+                blueLives--;
+                NewBall();
             }
 
             if (ballPos.X > Window.ClientBounds.Width - ball.Width)
             {
-                LoseLife(2);
-                LoadContent();
+                redLives--;
+                NewBall();
             }
 
             if (BoundingboxBall.Intersects(BoundingboxBlue))
@@ -210,7 +204,7 @@ namespace Pong
                 float normOffsetMiddle = (offsetMiddle / (red.Height / 2));                                 //difference between middle of paddle and middle of ball normalized (decimal number between -1 and 1)
                 float angleIncrease = normOffsetMiddle * 7;                                                 //determines how extreme the bounce angle will be
 
-                newBallPos.Y = -angleIncrease;                                                              //
+                newBallPos.Y = -angleIncrease;                                             
                 newBallPos.Normalize();
 
                 if (speedCounter < maxSpeedCounter)
@@ -223,6 +217,33 @@ namespace Pong
                 
             }
         }
+
+        public void CheckLives()
+        {
+            if (blueLives == 0)
+            {
+                currentState = GameState.RedWins;
+            }
+
+            if (redLives == 0)
+            {
+                currentState = GameState.BlueWins;
+            }
+        }
+
+        public void NewBall()
+        {
+            ballPos = new Vector2((Window.ClientBounds.Width / 2) - (ball.Width / 2), (Window.ClientBounds.Height / 2) - (ball.Height / 2));
+
+            ballSpeed = 5;
+
+            newBallPos = GenerateDirection();
+            newBallPos.Normalize();
+            newBallPos *= ballSpeed;
+
+            speedCounter = 0;
+        }
+
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
@@ -233,10 +254,19 @@ namespace Pong
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            
+            if (currentState == GameState.Playing)
+            {
+                PlayerMovement();
+                BallMovement();
+                CheckLives();
+            }
 
-            PlayerMovement();
-            BallMovement();
+            else if (Keyboard.GetState().IsKeyDown(Keys.Space))
+            {
+                LoadContent();
+                currentState = GameState.Playing;
+            }
+
 
             base.Update(gameTime);
         }
@@ -244,13 +274,29 @@ namespace Pong
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.White);
-
-            // TODO: Add your drawing code here
             spriteBatch.Begin();
-            spriteBatch.Draw(ball, ballPos, Color.White);
-            spriteBatch.Draw(blue, bluePos, Color.White);
-            spriteBatch.Draw(red, redPos, Color.White);
-            
+            if (currentState == GameState.Playing)
+            {
+                spriteBatch.Draw(ball, ballPos, Color.White);
+                spriteBatch.Draw(blue, bluePos, Color.White);
+                spriteBatch.Draw(red, redPos, Color.White);
+            }
+
+            else if (currentState == GameState.Start)
+            {
+                spriteBatch.Draw(titleScreen, new Vector2(0, 0), Color.White);
+            }
+
+            else if (currentState == GameState.BlueWins)
+            {
+                spriteBatch.Draw(blueWinsScreen, new Vector2(0, 0), Color.White);
+            }
+            else if (currentState == GameState.RedWins)
+            {
+                spriteBatch.Draw(redWinsScreen, new Vector2(0, 0), Color.White);
+            }
+
+
             for (int i = 0; i < blueLives; ++i)
             {
                 spriteBatch.Draw(ball, blueLivesPos + livesOffset * i, Color.White);
